@@ -1,41 +1,99 @@
 import { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Navbar } from './components/layout/Navbar';
-import { Footer } from './components/layout/Footer';
+import { Toaster } from 'react-hot-toast';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
+import { AdminRoute } from './components/common/AdminRoute';
+import { SellerRoute } from './components/common/SellerRoute';
 
-const Home = lazy(() => import('./pages/Home').then(module => ({ default: module.Home })));
-const Products = lazy(() => import('./pages/Products').then(module => ({ default: module.Products })));
-const ProductDetail = lazy(() => import('./pages/ProductDetail').then(module => ({ default: module.ProductDetail })));
-const Cart = lazy(() => import('./pages/Cart').then(module => ({ default: module.Cart })));
-const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
-const Orders = lazy(() => import('./pages/Orders').then(module => ({ default: module.Orders })));
+// Shared layout wrapper for buyer pages
+const BuyerLayout = lazy(() => import('./components/layout/BuyerLayout').then(m => ({ default: m.BuyerLayout })));
+const AdminLayout = lazy(() => import('./components/layout/AdminLayout').then(m => ({ default: m.AdminLayout })));
+const SellerLayout = lazy(() => import('./components/layout/SellerLayout').then(m => ({ default: m.SellerLayout })));
+
+// Buyer Pages
+const Home = lazy(() => import('./pages/Home').then(m => ({ default: m.Home })));
+const Products = lazy(() => import('./pages/Products').then(m => ({ default: m.Products })));
+const ProductDetail = lazy(() => import('./pages/ProductDetail').then(m => ({ default: m.ProductDetail })));
+const Cart = lazy(() => import('./pages/Cart').then(m => ({ default: m.Cart })));
+const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
+const Register = lazy(() => import('./pages/Register').then(m => ({ default: m.Register })));
+const Orders = lazy(() => import('./pages/Orders').then(m => ({ default: m.Orders })));
+const OrderDetail = lazy(() => import('./pages/OrderDetail').then(m => ({ default: m.OrderDetail })));
+const OrderTracking = lazy(() => import('./pages/OrderTracking').then(m => ({ default: m.OrderTracking })));
+const Checkout = lazy(() => import('./pages/Checkout').then(m => ({ default: m.Checkout })));
+const UserProfile = lazy(() => import('./pages/UserProfile').then(m => ({ default: m.UserProfile })));
+const NotFound = lazy(() => import('./pages/NotFound').then(m => ({ default: m.NotFound })));
+
+// Seller Pages
+const SellerDashboard = lazy(() => import('./pages/seller/SellerDashboard').then(m => ({ default: m.SellerDashboard })));
+const SellerProducts = lazy(() => import('./pages/seller/SellerProducts').then(m => ({ default: m.SellerProducts })));
+const SellerInventory = lazy(() => import('./pages/seller/SellerInventory').then(m => ({ default: m.SellerInventory })));
+const SellerOrders = lazy(() => import('./pages/seller/SellerOrders').then(m => ({ default: m.SellerOrders })));
+const SellerRevenue = lazy(() => import('./pages/seller/SellerRevenue').then(m => ({ default: m.SellerRevenue })));
+
+// Admin Pages
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminProducts = lazy(() => import('./pages/admin/AdminProducts').then(m => ({ default: m.AdminProducts })));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers').then(m => ({ default: m.AdminUsers })));
+const AdminDisputes = lazy(() => import('./pages/admin/AdminDisputes').then(m => ({ default: m.AdminDisputes })));
+const AdminAuditLogs = lazy(() => import('./pages/admin/AdminAuditLogs').then(m => ({ default: m.AdminAuditLogs })));
+
+function LoadingSpinner() {
+  return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+}
 
 function App() {
   return (
     <Router>
       <div className="flex flex-col min-h-screen bg-background font-sans antialiased">
-        <Navbar />
-        <main className="flex-1 flex flex-col">
-          <Suspense fallback={<div className="flex-1 flex items-center justify-center">Loading...</div>}>
-            <Routes>
+        <Toaster position="top-center" reverseOrder={false} />
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            {/* ══════════ Seller Panel ══════════ */}
+            <Route element={<SellerRoute />}>
+              <Route element={<SellerLayout />}>
+                <Route path="/seller" element={<SellerDashboard />} />
+                <Route path="/seller/products" element={<SellerProducts />} />
+                <Route path="/seller/inventory" element={<SellerInventory />} />
+                <Route path="/seller/orders" element={<SellerOrders />} />
+                <Route path="/seller/revenue" element={<SellerRevenue />} />
+              </Route>
+            </Route>
+
+            {/* ══════════ Admin Panel ══════════ */}
+            <Route element={<AdminRoute />}>
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/products" element={<AdminProducts />} />
+                <Route path="/admin/users" element={<AdminUsers />} />
+                <Route path="/admin/disputes" element={<AdminDisputes />} />
+                <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+              </Route>
+            </Route>
+
+            {/* ══════════ Buyer / Public ══════════ */}
+            <Route element={<BuyerLayout />}>
               <Route path="/" element={<Home />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/:id" element={<ProductDetail />} />
               <Route path="/login" element={<Login />} />
-
-              {/* Protected Routes */}
+              <Route path="/register" element={<Register />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/cart" element={<Cart />} />
+                <Route path="/checkout" element={<Checkout />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/orders/:id" element={<OrderDetail />} />
+                <Route path="/orders/:id/tracking" element={<OrderTracking />} />
+                <Route path="/profile" element={<UserProfile />} />
               </Route>
-
-              {/* Catch all route - can create a NotFound page later */}
-              <Route path="*" element={<Home />} />
-            </Routes>
-          </Suspense>
-        </main>
-        <Footer />
+              <Route path="*" element={<NotFound />} />
+            </Route>
+          </Routes>
+        </Suspense>
       </div>
     </Router>
   );

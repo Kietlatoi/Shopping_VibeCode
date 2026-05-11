@@ -19,6 +19,36 @@ export const mockUsers: User[] = [
     roleId: 4,
     status: 'active',
   },
+  {
+    id: 'user-4',
+    email: 'shop2@shopeeclone.com',
+    roleId: 3,
+    status: 'active',
+  },
+  {
+    id: 'user-5',
+    email: 'john@example.com',
+    roleId: 4,
+    status: 'active',
+  },
+  {
+    id: 'user-6',
+    email: 'alice@example.com',
+    roleId: 4,
+    status: 'active',
+  },
+  {
+    id: 'user-7',
+    email: 'spam_user@mail.com',
+    roleId: 4,
+    status: 'banned',
+  },
+  {
+    id: 'user-8',
+    email: 'newuser@example.com',
+    roleId: 4,
+    status: 'unverified',
+  },
 ];
 
 export const mockRoles: Role[] = [

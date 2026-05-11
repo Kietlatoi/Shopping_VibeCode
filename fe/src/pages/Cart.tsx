@@ -1,17 +1,12 @@
-import { Link } from 'react-router-dom';
-import { type CartItem, useCartStore } from '@/store';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCartStore } from '@/store';
+import { formatPrice } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus, Trash2, ArrowLeft, ShoppingBag } from 'lucide-react';
 
 export function Cart() {
+  const navigate = useNavigate();
   const { items, totalItems, totalPrice, updateQuantity, removeItem } = useCartStore();
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(price);
-  };
 
   if (items.length === 0) {
     return (
@@ -35,7 +30,7 @@ export function Cart() {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item: CartItem) => {
+          {items.map((item) => {
             const variantLabel = item.variantAttributes
               ? Object.entries(item.variantAttributes)
                   .map(([_, val]) => val)
@@ -49,13 +44,17 @@ export function Cart() {
                     src={item.thumbnail}
                     alt={item.productName}
                     className="w-24 h-24 object-cover rounded-lg border"
+                    loading="lazy"
                   />
                 </Link>
 
                 <div className="flex-1 flex flex-col justify-between">
                   <div className="flex justify-between gap-2">
                     <div>
-                      <Link to={`/products/${item.productId}`} className="font-semibold hover:text-primary transition-colors line-clamp-2">
+                      <Link
+                        to={`/products/${item.productId}`}
+                        className="font-semibold hover:text-primary transition-colors line-clamp-2"
+                      >
                         {item.productName}
                       </Link>
                       {variantLabel && (
@@ -141,7 +140,11 @@ export function Cart() {
               </div>
             </div>
 
-            <Button size="lg" className="w-full rounded-xl h-12 text-base">
+            <Button
+              size="lg"
+              className="w-full rounded-xl h-12 text-base"
+              onClick={() => navigate('/checkout')}
+            >
               Tiến hành đặt hàng
             </Button>
           </div>

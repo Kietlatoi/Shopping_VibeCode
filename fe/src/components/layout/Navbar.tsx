@@ -123,8 +123,28 @@ export function Navbar() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
+                  <Link to="/profile" className="cursor-pointer">Hồ sơ của tôi</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link to="/orders" className="cursor-pointer">Đơn mua</Link>
                 </DropdownMenuItem>
+                {user?.roleId === 3 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/seller" className="cursor-pointer font-medium">Kênh Người Bán</Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {(user?.roleId === 1 || user?.roleId === 2) && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/admin" className="cursor-pointer font-medium">Admin Panel</Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout} className="text-destructive cursor-pointer focus:bg-destructive/10 focus:text-destructive">
                   Đăng xuất
                 </DropdownMenuItem>
