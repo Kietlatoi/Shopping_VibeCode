@@ -1,9 +1,11 @@
-import { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Suspense, lazy, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { AdminRoute } from './components/common/AdminRoute';
 import { SellerRoute } from './components/common/SellerRoute';
+import { RouteLoadingBar } from './components/common/RouteLoadingBar';
+import { useAuthStore } from './store';
 
 // Shared layout wrapper for buyer pages
 const BuyerLayout = lazy(() => import('./components/layout/BuyerLayout').then(m => ({ default: m.BuyerLayout })));
@@ -17,6 +19,8 @@ const ProductDetail = lazy(() => import('./pages/ProductDetail').then(m => ({ de
 const Cart = lazy(() => import('./pages/Cart').then(m => ({ default: m.Cart })));
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
 const Register = lazy(() => import('./pages/Register').then(m => ({ default: m.Register })));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const About = lazy(() => import('./pages/About').then(m => ({ default: m.About })));
 const Orders = lazy(() => import('./pages/Orders').then(m => ({ default: m.Orders })));
 const OrderDetail = lazy(() => import('./pages/OrderDetail').then(m => ({ default: m.OrderDetail })));
 const OrderTracking = lazy(() => import('./pages/OrderTracking').then(m => ({ default: m.OrderTracking })));
@@ -40,15 +44,38 @@ const AdminAuditLogs = lazy(() => import('./pages/admin/AdminAuditLogs').then(m 
 
 function LoadingSpinner() {
   return (
-    <div className="flex-1 flex items-center justify-center">
-      <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+    <div className="flex-1 flex flex-col items-center justify-center gap-4">
+      <div className="relative">
+        <div className="w-12 h-12 border-4 border-primary/20 rounded-full" />
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin absolute inset-0" />
+      </div>
+      <p className="text-sm text-muted-foreground animate-pulse">Đang tải...</p>
     </div>
   );
+}
+
+function SessionWatcher() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isTokenExpired = useAuthStore((state) => state.isTokenExpired);
+  const logout = useAuthStore((state) => state.logout);
+
+  useEffect(() => {
+    if (isAuthenticated && isTokenExpired()) {
+      logout();
+      navigate('/login', { replace: true, state: { from: location.pathname } });
+    }
+  }, [isAuthenticated, isTokenExpired, location.pathname, logout, navigate]);
+
+  return null;
 }
 
 function App() {
   return (
     <Router>
+      <SessionWatcher />
+      <RouteLoadingBar />
       <div className="flex flex-col min-h-screen bg-background font-sans antialiased">
         <Toaster position="top-center" reverseOrder={false} />
         <Suspense fallback={<LoadingSpinner />}>
@@ -80,8 +107,10 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/products" element={<Products />} />
               <Route path="/products/:id" element={<ProductDetail />} />
+              <Route path="/about" element={<About />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route element={<ProtectedRoute />}>
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/checkout" element={<Checkout />} />

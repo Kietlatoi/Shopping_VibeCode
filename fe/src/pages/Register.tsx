@@ -4,6 +4,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNotifications } from '@/hooks/useNotifications';
+import { apiService } from '@/services/api';
+import { useAuthStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,6 +28,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export function Register() {
   const { success: notifySuccess, error: notifyError } = useNotifications();
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -40,10 +43,12 @@ export function Register() {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
-      // Mock registration — will be replaced with real API
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      notifySuccess('Đăng ký thành công! Vui lòng đăng nhập.');
-      navigate('/login');
+      const result = await apiService.register(values.email, values.password);
+      if (result) {
+        login(result.user, result.token, result.tokenExpiresAt);
+        notifySuccess('Đăng ký thành công!');
+        navigate('/');
+      }
     } catch {
       notifyError('Đã có lỗi xảy ra. Vui lòng thử lại sau.');
       setError('root', { message: 'Đã có lỗi xảy ra. Vui lòng thử lại sau.' });

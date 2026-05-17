@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCartStore, useAuthStore } from '@/store';
+import { useSyncedCart } from '@/hooks/useSyncedCart';
 import { useNotifications } from '@/hooks/useNotifications';
+import { apiService } from '@/services/api';
 import { formatPrice } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,15 +17,15 @@ import {
   Truck,
   ChevronLeft,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 
 type PaymentMethod = 'cod' | 'credit_card';
 
 export function Checkout() {
   const navigate = useNavigate();
-  const { items, totalPrice, totalItems, clearCart } = useCartStore();
-  const { user } = useAuthStore();
-  const { success: notifySuccess } = useNotifications();
+  const { items, totalPrice, totalItems, clearCart } = useSyncedCart();
+  const { success: notifySuccess, error: notifyError } = useNotifications();
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -49,11 +50,16 @@ export function Checkout() {
     if (!isAddressValid) return;
     setIsPlacingOrder(true);
     try {
-      // Mock order placement
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      await apiService.createOrder({
+        items,
+        shippingAddress: `${address.fullName}, ${address.phone}, ${address.street}, ${address.ward}, ${address.district}, ${address.city}`,
+        paymentMethod,
+      });
       setOrderPlaced(true);
       clearCart();
       notifySuccess('Đặt hàng thành công!');
+    } catch {
+      notifyError('Chưa thể đặt hàng. Vui lòng kiểm tra kết nối và thử lại nhé.');
     } finally {
       setIsPlacingOrder(false);
     }
@@ -270,11 +276,12 @@ export function Checkout() {
 
               <Button
                 size="lg"
-                className="w-full rounded-xl h-12 text-base"
+                className="w-full rounded-xl h-12 text-base gap-2"
                 disabled={!isAddressValid || isPlacingOrder}
                 onClick={handlePlaceOrder}
               >
-                {isPlacingOrder ? 'Đang xử lý...' : 'Đặt hàng'}
+                {isPlacingOrder && <Loader2 className="h-5 w-5 animate-spin" />}
+                {isPlacingOrder ? 'Đang xử lý đơn hàng...' : 'Đặt hàng'}
               </Button>
 
               {!isAddressValid && (

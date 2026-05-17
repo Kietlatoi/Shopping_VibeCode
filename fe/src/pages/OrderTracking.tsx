@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
+import { useNotifications } from '@/hooks/useNotifications';
 import { type Order } from '@/types/order';
 import { formatDate } from '@/utils/formatters';
 import { ORDER_STATUS } from '@/constants';
@@ -97,9 +99,22 @@ const getTrackingSteps = (order: Order): TrackingStep[] => {
 export function OrderTracking() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { success: notifySuccess, error: notifyError } = useNotifications();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
+  const confirmMutation = useMutation({
+    mutationFn: (orderId: string) => apiService.confirmDelivery(orderId),
+    onSuccess: () => {
+      notifySuccess('Đã xác nhận nhận hàng thành công!');
+      // Refresh order data
+      if (id) {
+        apiService.getOrderById(id).then((data) => setOrder(data ?? null));
+      }
+    },
+    onError: () => notifyError('Không thể xác nhận. Vui lòng thử lại.'),
+  });
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -233,6 +248,26 @@ export function OrderTracking() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirm delivery button for buyer */}
+      {order.status === 'shipped' && (
+        <div className="mt-6 p-4 rounded-xl border border-green-200 bg-green-50 flex items-center justify-between">
+          <div>
+            <p className="font-medium text-sm">Bạn đã nhận được hàng?</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Xác nhận để hoàn tất đơn hàng
+            </p>
+          </div>
+          <Button
+            className="gap-2 bg-green-600 hover:bg-green-700"
+            onClick={() => confirmMutation.mutate(order.id)}
+            disabled={confirmMutation.isPending}
+          >
+            <CheckCircle2 className="h-4 w-4" />
+            {confirmMutation.isPending ? 'Đang xử lý...' : 'Đã nhận hàng'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

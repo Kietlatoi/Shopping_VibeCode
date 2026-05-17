@@ -1,4 +1,4 @@
-import type { Shop, Product, ProductVariant } from '@/types/product';
+import type { Shop, Product } from '@/types/product';
 
 export const mockShops: Shop[] = [
   {

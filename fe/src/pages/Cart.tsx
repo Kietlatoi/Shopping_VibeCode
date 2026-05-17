@@ -1,12 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useCartStore } from '@/store';
+import { useSyncedCart } from '@/hooks/useSyncedCart';
 import { formatPrice } from '@/utils/formatters';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus, Trash2, ArrowLeft, ShoppingBag } from 'lucide-react';
 
 export function Cart() {
   const navigate = useNavigate();
-  const { items, totalItems, totalPrice, updateQuantity, removeItem } = useCartStore();
+  const { items, totalItems, totalPrice, updateQuantity, removeItem } = useSyncedCart();
 
   if (items.length === 0) {
     return (
@@ -33,7 +33,7 @@ export function Cart() {
           {items.map((item) => {
             const variantLabel = item.variantAttributes
               ? Object.entries(item.variantAttributes)
-                  .map(([_, val]) => val)
+                  .map(([, val]) => val)
                   .join(' - ')
               : '';
 

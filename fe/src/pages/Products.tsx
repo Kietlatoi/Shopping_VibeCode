@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
 import { type Product } from '@/types/product';
 import { formatPrice } from '@/utils/formatters';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useCartStore } from '@/store';
+import { useSyncedCart } from '@/hooks/useSyncedCart';
 import { useNotifications } from '@/hooks/useNotifications';
 import {
   ShoppingCart,
@@ -25,39 +26,24 @@ import {
 type SortValue = (typeof SORT_OPTIONS)[number]['value'];
 
 export function Products() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<SortValue>('popular');
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   const debouncedSearch = useDebounce(searchTerm, 300);
-  const addItem = useCartStore((state) => state.addItem);
+  const { addItem } = useSyncedCart();
   const { success: notifySuccess } = useNotifications();
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const data = await apiService.getProducts();
-      setProducts(data);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
-
-  // Reset page on search/sort change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearch, sortBy]);
+  const {
+    data: products = [],
+    isLoading: loading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['products'],
+    queryFn: apiService.getProducts,
+  });
 
   // Filter + sort
   const processedProducts = useMemo(() => {
@@ -116,13 +102,13 @@ export function Products() {
     }
   };
 
-  if (error) {
+  if (isError) {
     return (
       <div className="container mx-auto px-4 py-8 flex-1">
         <ErrorState
           title="Không thể tải sản phẩm"
           message="Đã xảy ra lỗi khi tải danh sách sản phẩm."
-          onRetry={fetchProducts}
+          onRetry={() => refetch()}
         />
       </div>
     );
@@ -148,7 +134,10 @@ export function Products() {
               type="search"
               placeholder="Tìm kiếm sản phẩm..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pr-8"
             />
             {searchTerm && (
@@ -156,7 +145,10 @@ export function Products() {
                 variant="ghost"
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
-                onClick={() => setSearchTerm('')}
+                onClick={() => {
+                  setSearchTerm('');
+                  setCurrentPage(1);
+                }}
                 aria-label="Xóa tìm kiếm"
               >
                 <X className="h-3 w-3" />
@@ -187,7 +179,10 @@ export function Products() {
               size="sm"
               variant={sortBy === option.value ? 'default' : 'outline'}
               className="rounded-full text-xs h-8"
-              onClick={() => setSortBy(option.value)}
+              onClick={() => {
+                setSortBy(option.value);
+                setCurrentPage(1);
+              }}
             >
               {option.label}
             </Button>
@@ -220,6 +215,7 @@ export function Products() {
             onClick={() => {
               setSearchTerm('');
               setSortBy('popular');
+              setCurrentPage(1);
             }}
           >
             Xóa bộ lọc

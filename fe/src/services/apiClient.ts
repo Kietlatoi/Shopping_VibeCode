@@ -2,7 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '@/store';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -10,7 +10,11 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    const { token } = useAuthStore.getState();
+    const { token, isTokenExpired, logout } = useAuthStore.getState();
+    if (isTokenExpired()) {
+      logout();
+      return Promise.reject(new Error('Phiên đăng nhập đã hết hạn'));
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

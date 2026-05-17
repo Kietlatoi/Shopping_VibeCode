@@ -8,6 +8,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const loginSchema = z.object({
@@ -30,8 +31,8 @@ export function Login() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: 'buyer@shopeeclone.com',
-      password: 'password123',
+      email: 'buyer@vibecode.com',
+      password: 'LocalSample123!',
     },
   });
 
@@ -39,7 +40,7 @@ export function Login() {
     try {
       const result = await apiService.login(values.email, values.password);
       if (result) {
-        login(result.user, result.token);
+        login(result.user, result.token, result.tokenExpiresAt);
         notifySuccess('Đăng nhập thành công!');
         navigate('/');
       } else {
@@ -47,24 +48,8 @@ export function Login() {
         setError('root', { message: 'Email hoặc mật khẩu không chính xác' });
       }
     } catch {
-      // Mock login fallback when backend is not available
-      const mockAccounts: Record<string, { roleId: number; password: string }> = {
-        'admin@shopeeclone.com': { roleId: 2, password: 'password123' },
-        'seller@shopeeclone.com': { roleId: 3, password: 'password123' },
-        'buyer@shopeeclone.com': { roleId: 4, password: 'password123' },
-      };
-      const account = mockAccounts[values.email];
-      if (account && values.password === account.password) {
-        login(
-          { id: `user-mock-${Date.now()}`, email: values.email, roleId: account.roleId, status: 'active' },
-          'mock-jwt-token'
-        );
-        notifySuccess('Đăng nhập thành công! (mock)');
-        navigate('/');
-      } else {
-        notifyError('Email hoặc mật khẩu không chính xác');
-        setError('root', { message: 'Email hoặc mật khẩu không chính xác' });
-      }
+      notifyError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      setError('root', { message: 'Không thể kết nối đến máy chủ' });
     }
   };
 
@@ -115,18 +100,19 @@ export function Login() {
               )}
             </div>
 
-             {/* Quick Login Helper for Mock */}
+             {/* Quick Login Helper */}
              <div className="mt-4 p-3 bg-muted rounded-md text-xs text-muted-foreground">
-               <p className="font-semibold mb-1">Tài khoản demo:</p>
+               <p className="font-semibold mb-1">Tài khoản demo (mật khẩu: LocalSample123!):</p>
                <ul className="space-y-1 list-disc list-inside ml-4">
-                 <li>admin@shopeeclone.com</li>
-                 <li>seller@shopeeclone.com</li>
-                 <li>buyer@shopeeclone.com</li>
+                 <li>admin@vibecode.com (Admin)</li>
+                 <li>seller@vibecode.com (Seller)</li>
+                 <li>buyer@vibecode.com (Buyer)</li>
                </ul>
              </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full gap-2" disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
               {isSubmitting ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </Button>
             <div className="text-center text-sm text-muted-foreground">

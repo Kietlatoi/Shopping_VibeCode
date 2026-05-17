@@ -9,7 +9,7 @@ export const useNotifications = () => {
     toast.error(message);
   };
 
-  const promise = (promise: Promise<any>, messages: { loading: string; success: string; error: string }) => {
+  const promise = <T,>(promise: Promise<T>, messages: { loading: string; success: string; error: string }) => {
     toast.promise(promise, messages);
   };
 

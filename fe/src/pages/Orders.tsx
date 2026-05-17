@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
-import { type Order } from '@/types/order';
 import { formatPrice, formatDate } from '@/utils/formatters';
 import { ORDER_STATUS, ORDER_STATUS_COLOR } from '@/constants';
 import { ErrorState } from '@/components/common/ErrorState';
@@ -12,26 +11,15 @@ import { Separator } from '@/components/ui/separator';
 import { Package } from 'lucide-react';
 
 export function Orders() {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const data = await apiService.getOrders();
-      setOrders(data);
-    } catch {
-      setError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const {
+    data: orders = [],
+    isLoading: loading,
+    isError: error,
+    refetch,
+  } = useQuery({
+    queryKey: ['orders'],
+    queryFn: apiService.getOrders,
+  });
 
   if (loading) {
     return (
@@ -65,7 +53,7 @@ export function Orders() {
         <ErrorState
           title="Không thể tải đơn hàng"
           message="Đã xảy ra lỗi khi tải danh sách đơn hàng."
-          onRetry={fetchOrders}
+          onRetry={() => refetch()}
         />
       </div>
     );

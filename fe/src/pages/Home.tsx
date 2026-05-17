@@ -1,39 +1,20 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { apiService } from '@/services/api';
 import type { Product } from '@/types/product';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useCartStore } from '@/store';
+import { useSyncedCart } from '@/hooks/useSyncedCart';
 import { formatPrice } from '@/utils/formatters';
 
 export function Home() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const addItem = useCartStore((state) => state.addItem);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        // Since the backend doesn't exist, this will fail.
-        // We'll keep the mock for now and switch later.
-        const data = await apiService.getProducts();
-        setProducts(data);
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        // Fallback to mock data if API fails
-        const { mockProducts } = await import('@/mockdata/products');
-        setProducts(mockProducts);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
+  const { addItem } = useSyncedCart();
+  const { data: products = [], isLoading: loading } = useQuery<Product[]>({
+    queryKey: ['home-products'],
+    queryFn: apiService.getProducts,
+  });
 
   const handleAddToCart = (product: Product, e: React.MouseEvent) => {
     e.preventDefault();

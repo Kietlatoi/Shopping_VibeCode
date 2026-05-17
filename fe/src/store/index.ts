@@ -3,26 +3,74 @@ import { persist } from 'zustand/middleware';
 import type { User } from '@/types/user';
 import type { CartItem } from '@/types/cart';
 
+const calculateCartTotals = (items: CartItem[]) => ({
+  totalItems: items.reduce((total, item) => total + item.quantity, 0),
+  totalPrice: items.reduce((total, item) => total + item.price * item.quantity, 0),
+});
+
 // --- Auth Store ---
 interface AuthState {
   user: User | null;
   token: string | null;
+  tokenExpiresAt: number | null;
   isAuthenticated: boolean;
-  login: (user: User, token: string) => void;
+  login: (user: User, token: string, tokenExpiresAt?: number | null) => void;
   logout: () => void;
+  isTokenExpired: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
+      tokenExpiresAt: null,
       isAuthenticated: false,
-      login: (user, token) => set({ user, token, isAuthenticated: true }),
-      logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      login: (user, token, tokenExpiresAt = null) =>
+        set({ user, token, tokenExpiresAt, isAuthenticated: true }),
+      logout: () => set({ user: null, token: null, tokenExpiresAt: null, isAuthenticated: false }),
+      isTokenExpired: () => {
+        const expiresAt = get().tokenExpiresAt;
+        return Boolean(expiresAt && Date.now() >= expiresAt);
+      },
     }),
     {
       name: 'auth-storage', // unique name
+    }
+  )
+);
+
+// --- Theme Store ---
+interface ThemeState {
+  theme: 'light' | 'dark';
+  setTheme: (theme: 'light' | 'dark') => void;
+  toggleTheme: () => void;
+}
+
+const applyTheme = (theme: 'light' | 'dark') => {
+  if (typeof document === 'undefined') return;
+  document.documentElement.classList.toggle('dark', theme === 'dark');
+};
+
+export const useThemeStore = create<ThemeState>()(
+  persist(
+    (set, get) => ({
+      theme: 'light',
+      setTheme: (theme) => {
+        applyTheme(theme);
+        set({ theme });
+      },
+      toggleTheme: () => {
+        const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
+        applyTheme(nextTheme);
+        set({ theme: nextTheme });
+      },
+    }),
+    {
+      name: 'theme-storage',
+      onRehydrateStorage: () => (state) => {
+        applyTheme(state?.theme ?? 'light');
+      },
     }
   )
 );
@@ -32,6 +80,7 @@ interface CartState {
   items: CartItem[];
   totalItems: number;
   totalPrice: number;
+  setItems: (items: CartItem[]) => void;
   addItem: (item: CartItem) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
@@ -44,6 +93,11 @@ export const useCartStore = create<CartState>()(
       items: [],
       totalItems: 0,
       totalPrice: 0,
+
+      setItems: (items) => set({
+        items,
+        ...calculateCartTotals(items),
+      }),
 
       addItem: (newItem) => set((state) => {
         const existingItem = state.items.find(item => item.id === newItem.id);
@@ -59,8 +113,7 @@ export const useCartStore = create<CartState>()(
         }
         return {
           items: updatedItems,
-          totalItems: updatedItems.reduce((total, item) => total + item.quantity, 0),
-          totalPrice: updatedItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+          ...calculateCartTotals(updatedItems),
         };
       }),
 
@@ -68,8 +121,7 @@ export const useCartStore = create<CartState>()(
         const updatedItems = state.items.filter(item => item.id !== id);
         return {
           items: updatedItems,
-          totalItems: updatedItems.reduce((total, item) => total + item.quantity, 0),
-          totalPrice: updatedItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+          ...calculateCartTotals(updatedItems),
         };
       }),
 
@@ -79,8 +131,7 @@ export const useCartStore = create<CartState>()(
           const updatedItems = state.items.filter(item => item.id !== id);
           return {
             items: updatedItems,
-            totalItems: updatedItems.reduce((total, item) => total + item.quantity, 0),
-            totalPrice: updatedItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+            ...calculateCartTotals(updatedItems),
           };
         }
         const updatedItems = state.items.map(item =>
@@ -88,8 +139,7 @@ export const useCartStore = create<CartState>()(
         );
         return {
           items: updatedItems,
-          totalItems: updatedItems.reduce((total, item) => total + item.quantity, 0),
-          totalPrice: updatedItems.reduce((total, item) => total + (item.price * item.quantity), 0)
+          ...calculateCartTotals(updatedItems),
         };
       }),
 

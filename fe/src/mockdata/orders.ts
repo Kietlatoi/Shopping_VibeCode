@@ -1,7 +1,5 @@
 import { mockUsers } from './users';
-import type { User } from '@/types/user';
 import { mockProducts } from './products';
-import type { Product, ProductVariant } from '@/types/product';
 
 import { type Order, type OrderItem } from '@/types/order';
 

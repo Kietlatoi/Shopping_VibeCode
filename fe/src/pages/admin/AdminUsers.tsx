@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { mockUsers } from '@/mockdata/users';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService } from '@/services/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useNotifications } from '@/hooks/useNotifications';
-import { Search, Ban, CheckCircle2, Shield, ShoppingBag, User as UserIcon } from 'lucide-react';
+import { Search, Ban, CheckCircle2, Shield, ShoppingBag, User as UserIcon, Loader2 } from 'lucide-react';
 import type { User } from '@/types/user';
 
 const roleMap: Record<number, { label: string; icon: React.ComponentType<{ className?: string }>; cls: string }> = {
@@ -22,27 +23,44 @@ const statusMap: Record<string, { label: string; cls: string }> = {
 };
 
 export function AdminUsers() {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
-  const { success: notifySuccess } = useNotifications();
+  const { success: notifySuccess, error: notifyError } = useNotifications();
+
+  const { data: users = [], isLoading } = useQuery<User[]>({
+    queryKey: ['admin-users'],
+    queryFn: apiService.getAdminUsers,
+  });
+
+  const banMutation = useMutation({
+    mutationFn: (userId: string) => {
+      const user = users.find((u) => u.id === userId);
+      if (user?.status === 'banned') {
+        return apiService.unbanUser(userId);
+      }
+      return apiService.banUser(userId);
+    },
+    onSuccess: (_data, userId) => {
+      const user = users.find((u) => u.id === userId);
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      notifySuccess(
+        user?.status === 'banned' ? `Đã unban ${user.email}` : `Đã ban ${user?.email}`
+      );
+    },
+    onError: () => notifyError('Thao tác thất bại'),
+  });
 
   const filtered = search
     ? users.filter((u) => u.email.toLowerCase().includes(search.toLowerCase()))
     : users;
 
-  const handleToggleBan = (userId: string) => {
-    setUsers(
-      users.map((u) => {
-        if (u.id !== userId) return u;
-        const newStatus = u.status === 'banned' ? 'active' : 'banned';
-        return { ...u, status: newStatus as User['status'] };
-      })
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
-    const user = users.find((u) => u.id === userId);
-    notifySuccess(
-      user?.status === 'banned' ? `Đã unban ${user.email}` : `Đã ban ${user?.email}`
-    );
-  };
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -89,7 +107,7 @@ export function AdminUsers() {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-muted-foreground">ID: {user.id}</span>
+                    <span className="text-xs text-muted-foreground">ID: {user.id.slice(0, 8)}</span>
                     {user.roleId >= 3 && (
                       <Button
                         size="sm"
@@ -99,7 +117,8 @@ export function AdminUsers() {
                             ? 'text-green-600 hover:bg-green-50'
                             : 'text-destructive hover:bg-destructive/10'
                         }`}
-                        onClick={() => handleToggleBan(user.id)}
+                        onClick={() => banMutation.mutate(user.id)}
+                        disabled={banMutation.isPending}
                       >
                         {user.status === 'banned' ? (
                           <>

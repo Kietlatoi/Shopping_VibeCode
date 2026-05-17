@@ -1,27 +1,41 @@
 import { useState } from 'react';
-import { mockProducts } from '@/mockdata/products';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService } from '@/services/api';
 import { formatPrice } from '@/utils/formatters';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
-import { CheckCircle2, XCircle, Eye } from 'lucide-react';
+import { CheckCircle2, XCircle, Eye, Loader2 } from 'lucide-react';
 import type { Product } from '@/types/product';
 
 export function AdminProducts() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('all');
-  const { success: notifySuccess } = useNotifications();
+  const { success: notifySuccess, error: notifyError } = useNotifications();
 
-  const handleApprove = (id: string) => {
-    setProducts(products.map((p) => (p.id === id ? { ...p, isApproved: true } : p)));
-    notifySuccess('Đã duyệt sản phẩm!');
-  };
+  const { data: products = [], isLoading } = useQuery<Product[]>({
+    queryKey: ['admin-products'],
+    queryFn: apiService.getAdminProducts,
+  });
 
-  const handleReject = (id: string) => {
-    setProducts(products.map((p) => (p.id === id ? { ...p, isApproved: false, deletedAt: new Date().toISOString() } : p)));
-    notifySuccess('Đã từ chối sản phẩm');
-  };
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => apiService.approveProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      notifySuccess('Đã duyệt sản phẩm!');
+    },
+    onError: () => notifyError('Không thể duyệt sản phẩm'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => apiService.rejectProduct(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      notifySuccess('Đã từ chối sản phẩm');
+    },
+    onError: () => notifyError('Không thể từ chối sản phẩm'),
+  });
 
   const filtered = products.filter((p) => {
     if (filter === 'pending') return !p.isApproved;
@@ -30,6 +44,14 @@ export function AdminProducts() {
   });
 
   const pendingCount = products.filter((p) => !p.isApproved).length;
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -93,7 +115,8 @@ export function AdminProducts() {
                       <Button
                         size="sm"
                         className="gap-1.5 bg-green-600 hover:bg-green-700"
-                        onClick={() => handleApprove(product.id)}
+                        onClick={() => approveMutation.mutate(product.id)}
+                        disabled={approveMutation.isPending}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
                         Duyệt
@@ -102,7 +125,8 @@ export function AdminProducts() {
                         size="sm"
                         variant="outline"
                         className="gap-1.5 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleReject(product.id)}
+                        onClick={() => rejectMutation.mutate(product.id)}
+                        disabled={rejectMutation.isPending}
                       >
                         <XCircle className="h-3.5 w-3.5" />
                         Từ chối
